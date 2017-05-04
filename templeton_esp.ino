@@ -1,49 +1,58 @@
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUDP.h>
+#include <Adafruit_MMA8451.h>
+#include <Adafruit_Sensor.h>
 
 ADC_MODE(ADC_VCC);
 
 WiFiUDP Udp;
+Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
-const String idString = "1";
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
 const char* host      = "192.168.1.8";
 const int port        = 23232; // both send and receive
 
-int lit = 0;
-int itr = 0;
+unsigned long ms;
+unsigned long seconds;
+String idString;
 
 void setup() {
   Serial.begin(115200);
   delay(1);
+  int id = ESP.getFlashChipId();
+  idString = String(id);  
+  Serial.print("ID: ");
+  Serial.println(idString);  
+  Wire.begin(12, 14);    // SDA, SCL
   pinMode(2, OUTPUT);  
   pinMode(14, INPUT_PULLUP);
+  mma.begin();
+  mma.setRange(MMA8451_RANGE_2_G);  
   connectToWifi();
   Udp.begin(port);
 }
 
 void loop() {
+  ms = millis();
+  seconds = ms / 1000;
+  if (seconds % 2 == 0) {
+    digitalWrite(2, LOW);  
+  } else {
+    digitalWrite(2, HIGH);  
+  }
+  mma.read();
+  sensors_event_t event; 
+  mma.getEvent(&event);  
   Udp.beginPacket(host, port);
   int tilt = digitalRead(14);
-  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + String(tilt);
+  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(tilt) + "," + String(event.acceleration.x, 8) + "," + String(event.acceleration.y, 8) + "," + String(event.acceleration.z, 8);  
   Serial.println(dataString);
   char dataBuf[dataString.length()+1];
   dataString.toCharArray(dataBuf, dataString.length()+1);
   Udp.write(dataBuf);
   Udp.endPacket();      
-  itr += 1;
-  if (itr == 100) {
-    if (lit == 1) {
-      digitalWrite(2, HIGH);      
-      lit = 0;
-    } else {
-      digitalWrite(2, LOW);
-      lit = 1;
-    }
-    itr = 0;
-  }
   delay(10);
 }
 
@@ -54,30 +63,16 @@ void connectToWifi() {
     Serial.print("Attempting to connect to: ");
     Serial.println(ssid);
     WiFi.begin(ssid, password);
-    int tries = 0;
-    while (tries < 20 && WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED) {
       digitalWrite(2, HIGH);
       delay(250);
       digitalWrite(2, LOW);
       delay(250);      
       Serial.print(".");
-      tries++;
-    }
-    if (WiFi.status() != WL_CONNECTED) {
-      WiFi.disconnect();
-      tries = 0;
-      while (tries < 20) {
-        digitalWrite(2, HIGH);
-        delay(250);
-        digitalWrite(2, LOW);
-        delay(250);
-        tries++;
-      }
     }
   }
   Serial.println();
   Serial.println("--> connected to wifi");
-  digitalWrite(0, HIGH);
   printWifiStatus();
 }
 

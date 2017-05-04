@@ -46,8 +46,8 @@ void loop() {
   sensors_event_t event; 
   mma.getEvent(&event);  
   Udp.beginPacket(host, port);
-  int tilt = digitalRead(14);
-  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(tilt) + "," + String(event.acceleration.x, 8) + "," + String(event.acceleration.y, 8) + "," + String(event.acceleration.z, 8);  
+//  int tilt = digitalRead(14);
+  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(event.acceleration.x, 8) + "," + String(event.acceleration.y, 8) + "," + String(event.acceleration.z, 8);  
   Serial.println(dataString);
   char dataBuf[dataString.length()+1];
   dataString.toCharArray(dataBuf, dataString.length()+1);

@@ -37,3 +37,5 @@ SCL is GPIO14
 
 
 5000 mah Lipo would last. Just under 60 hours till it stopped transmitting. - See more at: http://www.esp8266.com/viewtopic.php?f=13&t=8185#sthash.5KtwUvDf.dpuf
+
+https://github.com/esp8266/Arduino

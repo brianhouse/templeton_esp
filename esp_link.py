@@ -41,7 +41,9 @@ class ESPListener(threading.Thread):
                 if esp_id not in self.rates:
                     self.rates[esp_id] = 0
                 self.events[esp_id].append(1)
-                data = {'id': esp_id, 'rssi': int(data[1]), 'bat': int(((math.floor(int(data[2])/100)/10) / 4.0) * 100), 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 'data': [v for v in data[3:]]}
+                x, y, z = [float(n) for n in data[4:]]
+                rms = math.sqrt(x**2 + y**2 + z**2)
+                data = {'id': esp_id, 'rssi': int(data[1]), 'bat': int(((math.floor(int(data[2])/100)/10) / 4.0) * 100), 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': (float(data[3]) / 1000.0), 'rms': rms, 'x': x, 'y': y, 'z': z}
                 self.messages.put(data)
                 elapsed_t = time.time() - t_start
                 if elapsed_t >= 1:
@@ -106,9 +108,10 @@ class ESPSender(threading.Thread):
 
 
 if __name__ == "__main__":
-    fs = ESPSender()
     def message_handler(response):
-        log.info("%f [ID %s] [IP %s] [RSSI %d] [BAT %s%%] [HZ %s]:\t%s" % (response['t_utc'], response['id'], response['ip'], response['rssi'], response['bat'], response['rate'], "".join(["%s " % f for f in response['data']])))
+        log.info("%f [IP %s] [ID %s] [T %f] [RSSI %d] [BAT %s%%]\t[HZ %s]\t[RMS %f]\t[X %f]\t[Y %f]\t[Z %f]" % (response['t_utc'], response['ip'], response['id'], response['t'], response['rssi'], response['bat'], response['rate'], response['rms'], response['x'], response['y'], response['z']))
+        # db.branches.insert(data)
     fl = ESPListener(message_handler=message_handler)    
+
     while True:
-        time.sleep(1)
+        time.sleep(0.1)

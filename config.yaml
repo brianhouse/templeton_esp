@@ -1,3 +1,6 @@
+tail: False
+log: True
+
 mongo:
     host: localhost
     port: 27017

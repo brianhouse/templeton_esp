@@ -43,7 +43,9 @@ class ESPListener(threading.Thread):
                 self.events[esp_id].append(1)
                 x, y, z = [float(n) for n in data[4:]]
                 rms = math.sqrt(x**2 + y**2 + z**2)
-                data = {'id': esp_id, 'rssi': int(data[1]), 'bat': int(((math.floor(int(data[2])/100)/10) / 4.0) * 100), 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': (float(data[3]) / 1000.0), 'rms': rms, 'x': x, 'y': y, 'z': z}
+                bat = int(((math.floor(int(data[2])/100)/10) / 4.0) * 100)
+                bat = int((int(data[2]) / 3845) * 100)
+                data = {'id': esp_id, 'rssi': int(data[1]), 'bat': bat, 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': (float(data[3]) / 1000.0), 'rms': rms, 'x': x, 'y': y, 'z': z}
                 self.messages.put(data)
                 elapsed_t = time.time() - t_start
                 if elapsed_t >= 1:
@@ -73,6 +75,7 @@ class ESPHandler(threading.Thread):
             try:
                 message = self.messages.get()
                 self.message_handler(message)
+                time.sleep(1)
             except Exception as e:
                 log.error(log.exc(e))
 

@@ -11,7 +11,10 @@ Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.8";
+const char* host      = "192.168.1.11";
+//const char* ssid     = "GL-MT300N-5cb";
+//const char* password = "goodlife";
+//const char* host     = "192.168.8.235";
 const int port        = 23232; // both send and receive
 
 unsigned long ms;
@@ -25,11 +28,17 @@ void setup() {
   idString = String(id);  
   Serial.print("ID: ");
   Serial.println(idString);  
-  Wire.begin(12, 14);    // SDA, SCL
   pinMode(2, OUTPUT);  
-  pinMode(14, INPUT_PULLUP);
+
+  // accel
+  Wire.begin(12, 14);    // SDA, SCL
   mma.begin();
   mma.setRange(MMA8451_RANGE_2_G);  
+
+  // tilt
+//  pinMode(14, INPUT_PULLUP);
+
+  
   connectToWifi();
   Udp.begin(port);
 }
@@ -42,13 +51,22 @@ void loop() {
   } else {
     digitalWrite(2, HIGH);  
   }
+  if (WiFi.status() != WL_CONNECTED) {
+    connectToWifi();
+  }
+
+//  // simple tilt sensor
+//  int tilt = digitalRead(14);
+//  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(tilt) + ",0,0";  
+
+  // accelerometer
   mma.read();
   sensors_event_t event; 
   mma.getEvent(&event);  
-  Udp.beginPacket(host, port);
-//  int tilt = digitalRead(14);
   String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(event.acceleration.x, 8) + "," + String(event.acceleration.y, 8) + "," + String(event.acceleration.z, 8);  
+
   Serial.println(dataString);
+  Udp.beginPacket(host, port);  
   char dataBuf[dataString.length()+1];
   dataString.toCharArray(dataBuf, dataString.length()+1);
   Udp.write(dataBuf);
@@ -56,34 +74,21 @@ void loop() {
   delay(10);
 }
 
+
 void connectToWifi() {
+  Serial.println()
+  Serial.print("Attempting to connect to: ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.println();
-    Serial.println();
-    Serial.print("Attempting to connect to: ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      digitalWrite(2, HIGH);
-      delay(250);
-      digitalWrite(2, LOW);
-      delay(250);      
-      Serial.print(".");
-    }
+    digitalWrite(2, HIGH);
+    delay(250);
+    digitalWrite(2, LOW);
+    delay(250);      
+    Serial.print(".");
   }
   Serial.println();
   Serial.println("--> connected to wifi");
-  printWifiStatus();
 }
 
-void printWifiStatus() {
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-  long rssi = WiFi.RSSI();
-  Serial.print("Signal strength (RSSI):");
-  Serial.println(rssi);
-}
 

@@ -43,7 +43,8 @@ class ESPListener(threading.Thread):
                 self.events[esp_id].append(1)
                 x, y, z = [float(n) for n in data[4:]]
                 rms = math.sqrt(x**2 + y**2 + z**2)
-                bat = int(((int(data[2]) // 1024) / 3.7) * 100)
+                # bat = int(((int(data[2]) // 1024) / 3.7) * 100)
+                bat == int(data[2]) / 1024
                 data = {'id': esp_id, 'rssi': int(data[1]), 'bat': bat, 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': (float(data[3]) / 1000.0), 'rms': rms, 'x': x, 'y': y, 'z': z}
                 self.messages.put(data)
                 elapsed_t = time.time() - t_start

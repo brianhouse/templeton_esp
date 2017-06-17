@@ -75,7 +75,6 @@ class ESPHandler(threading.Thread):
             try:
                 message = self.messages.get()
                 self.message_handler(message)
-                time.sleep(1)
             except Exception as e:
                 log.error(log.exc(e))
 

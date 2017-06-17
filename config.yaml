@@ -1,5 +1,5 @@
-tail: False
-log: True
+tail: True
+log: False
 
 mongo:
     host: localhost

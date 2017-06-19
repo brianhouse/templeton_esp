@@ -64,22 +64,14 @@ in theory, it's already shutting the modem down when it doesnt need it. I guess 
 
 /
 
-
-5000 mah Lipo would last. Just under 60 hours till it stopped transmitting. - See more at: http://www.esp8266.com/viewtopic.php?f=13&t=8185#sthash.5KtwUvDf.dpuf
-
 https://github.com/esp8266/Arduino
-
-
 https://arduino-esp8266.readthedocs.io/en/latest/
 http://arduino.esp8266.com/versions/1.6.5-1160-gef26c5f/doc/reference.html
 http://esp8266.github.io/Arduino/versions/2.1.0-rc1/doc/libraries.html
 
 on the feather, I'm getting 3.027 for battery, and that has a regulator. so add something to compensate.
 
-
 http://www.esp8266.com/wiki/doku.php?id=esp8266_power_usage
-
-/
 
 multimeter reads 4.25 volts on a charged 3.7/150mah.
 I'm seeing 3.54 on the battery readout. so who knows.
@@ -89,6 +81,9 @@ this thing mysteriously stopped last time, without showing so much of a drop. an
 ok, it dies at 2.54.
 so, if you add 0.71, that's 4.25 -> 3.25, which is starting to make sense.
 
+but really, it reads 0?
+
+//
 
 
 47168 free memory / 60 bytes per dataString = 786 rows
@@ -106,3 +101,11 @@ doing the math client side, plus some room, is 40chars.
 1179 rows
 
 can get this to 45 seconds
+
+//
+
+43848 free memory with 33 x 100
+45496 free memory with 33 x 50
+
+33x50 should transmit 1650 bytes, but I'm getting 1024, so that feels like a limit.
+31 rows

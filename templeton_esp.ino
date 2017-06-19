@@ -19,12 +19,12 @@ const char* host      = "192.168.1.5";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
 const int port        = 23232; // both send and receive
-const int rows        = 10;
-const int entry       = 33;
+const int rows        = 34; 
+const int entry       = 30; // these have to multiply to < 1024 for UDP
 
 unsigned long ms;
 unsigned long seconds;
-unsigned long last_seconds;
+unsigned long last_seconds = 0;
 String idString;
 
 uint32_t mem;
@@ -56,12 +56,12 @@ void setup() {
   connectToWifi();
   Udp.begin(port);
 
+  // initialize buffer and store end byte
   for (int i=0; i < (rows * entry); i++) {
     data[i] = 'x';
   }
   data[(rows * entry)] = '\0';
 
-  last_seconds = 0;
 }
 
 void loop() {
@@ -82,37 +82,39 @@ void loop() {
   sensors_event_t event; 
   mma.getEvent(&event);  
   String mag = String(sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8);
-  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + mag + ",";
+  float bat = (ESP.getVcc() / 1024.0) + .7;
+  
+  String dataString = idString + "," + String(WiFi.RSSI() * -1) + "," + String(bat) + "," + ms + "," + mag + ",";
   char tempBuf[dataString.length() + 1];
   dataString.toCharArray(tempBuf, dataString.length() + 1);
   for (int i=0; i<sizeof(tempBuf)-1; i++) {
       data[(dataIndex * entry) + i] = tempBuf[i];
   }
-  dataIndex = (dataIndex + 1) % rows;
 
-  if (seconds != last_seconds) {
-    Serial.println(data);    
-    mem = system_get_free_heap_size();
-    Serial.print("Free memory: ");
-    Serial.println(mem);
+//  if (seconds != last_seconds) {
+//    mem = system_get_free_heap_size();
+//    Serial.print("Free memory: ");
+//    Serial.println(mem);
+//  }
+
+  if (dataIndex == rows - 1) {
+    Serial.print("Transmitting...");
     sendData();
+    Serial.println(" done.");
   }
-
-  
-
+  dataIndex = (dataIndex + 1) % rows;
   last_seconds = seconds;
-  delay(10);
+  
+  delay(50);
+  
 }
 
 void sendData() {
-//  Serial.println(data);
-  Serial.print("INDEX ");
-  Serial.println(dataIndex);
 //  if (WiFi.status() != WL_CONNECTED) {  // dont use this if in forced sleep
 //    connectToWifi();
 //  }                                     // if in UDP should never have to use this  
   Udp.beginPacket(host, port);  
-  Udp.write(data);
+  Udp.write(data);  // aparently a limit of 1024
   Udp.endPacket();      
 }
 

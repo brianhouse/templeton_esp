@@ -86,6 +86,9 @@ I'm seeing 3.54 on the battery readout. so who knows.
 
 this thing mysteriously stopped last time, without showing so much of a drop. and then it was 0 on the multimeter, which doesnt make sense.
 
+ok, it dies at 2.54.
+so, if you add 0.71, that's 4.25 -> 3.25, which is starting to make sense.
+
 
 
 47168 free memory / 60 bytes per dataString = 786 rows
@@ -103,6 +106,3 @@ doing the math client side, plus some room, is 40chars.
 1179 rows
 
 can get this to 45 seconds
-
-
-RMS 16.985616]  [X -9.806650]   [Y -9.806650]   [Z -9.806650

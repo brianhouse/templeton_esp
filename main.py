@@ -38,12 +38,11 @@ def draw():
 
 if __name__ == "__main__":
     def message_handler(response):
-        # log.info("%f [IP %s] [ID %s] [T %f] [RSSI %d] [BAT %s%%]\t[HZ %s]\t[RMS %f]\t[X %f]\t[Y %f]\t[Z %f]" % (response['t_utc'], response['ip'], response['id'], response['t'], response['rssi'], response['bat'], response['rate'], response['rms'], response['x'], response['y'], response['z']))
         # db.branches.insert(data)
         if response['id'] not in sensor_data:
             sensor_data[response['id']] = deque()
             sensor_rssi[response['id']] = None
-        sensor_data[response['id']].appendleft((response['t_utc'], response['rms']))
+        sensor_data[response['id']].appendleft((response['t_utc'], response['mag']))
         sensor_rssi[response['id']] = response['t_utc'], response['rssi']
         if len(sensor_data[response['id']]) == 1000:
             sensor_data[response['id']].pop()        

@@ -80,8 +80,9 @@ this thing mysteriously stopped last time, without showing so much of a drop. an
 
 ok, it dies at 2.54.
 so, if you add 0.71, that's 4.25 -> 3.25, which is starting to make sense.
+[actually should be 4.2 that is max charge]
 
-but really, it reads 0?
+but really, it reads 0? [yes, cutoff]
 
 //
 

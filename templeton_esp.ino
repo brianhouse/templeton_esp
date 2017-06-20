@@ -14,7 +14,7 @@ Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.5";
+const char* host      = "192.168.1.18";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
@@ -82,7 +82,7 @@ void loop() {
   sensors_event_t event; 
   mma.getEvent(&event);  
   String mag = String(sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8);
-  float bat = (ESP.getVcc() / 1024.0) + .7;
+  float bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v
   
   String dataString = idString + "," + String(WiFi.RSSI() * -1) + "," + String(bat) + "," + ms + "," + mag + ",";
   char tempBuf[dataString.length() + 1];

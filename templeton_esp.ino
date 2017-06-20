@@ -15,7 +15,7 @@ Adafruit_MMA8451 mma = Adafruit_MMA8451();
 // wifi
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.5";
+const char* host      = "192.168.1.18";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
@@ -25,7 +25,7 @@ const int port        = 23232; // both send and receive
 uint32_t mem;
 const int entry_size = 32;  // includes termination bit
 const int batch_size = 32;  // these have to multiply to <= 1024 for UDP
-const int set_size = 32;     // total has to keep under available memory (40 is too high)
+const int set_size = 24;     // total has to keep under available memory (40 is too high)
 int entry = 0;
 int batch = 0;
 char data[set_size][batch_size][entry_size]; 
@@ -61,8 +61,10 @@ void loop() {
   mma.getEvent(&event);  
 
   float mag = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity
-  if (mag > 10.0) {
-    mag = 9.9999;
+  if (mag >= 10.0) {
+    mag = 9.999;
+  } elif (mag <= -10.0) {
+    mag = -9.99; 
   }
 
   int bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v
@@ -71,9 +73,9 @@ void loop() {
   }
 
   // ID(8) Bat(2) Rec(2) Time(8) Mag(6) = 26 + ,(4) ;(1) + \0(1) = 32 bytes  
-  // 13019021,70,43,86400000,7.1900;\0
+  // 13019021,70,43,86400000,-7.190;\0
   
-  String dataString = String(ESP.getChipId()) + "," + String(WiFi.RSSI() * -1) + "," + bat + "," + ms + "," + String(mag, 4) + ";";
+  String dataString = String(ESP.getChipId()) + "," + String(WiFi.RSSI() * -1) + "," + bat + "," + ms + "," + String(mag, 3) + ";";
   dataString.toCharArray(data[batch][entry], dataString.length() + 1);
   
   entry++;
@@ -107,7 +109,7 @@ void sendData() {
       Udp.write(data[b][e]);  
     }
     Udp.endPacket();      
-    delay(1);
+    delay(2);
   }
   Serial.print(" done (");
   Serial.print(millis() - ms_test);

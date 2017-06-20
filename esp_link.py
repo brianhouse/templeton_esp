@@ -74,13 +74,14 @@ if __name__ == "__main__":
     rate = 0
     def message_handler(response):
         global start_t, stop_t, entries, rate
-        log.info("[ID %s] [IP %s] [RSSI %02d] [T %.3f] [BAT %02d] [MAG %.4f]" % (response['id'], response['ip'], response['rssi'], response['t'], response['bat'], response['mag']))
+        log.info("[ID %s] [IP %s] [RSSI %02d] [T %.3f] [BAT %02d] [MAG %.3f]" % (response['id'], response['ip'], response['rssi'], response['t'], response['bat'], response['mag']))
         entries += 1
         current_t = response['t']
         if start_t is None:
             start_t = current_t
         elapsed_t = current_t - start_t
-        rate = entries / elapsed_t
+        if elapsed_t > 0:
+            rate = entries / elapsed_t
     fl = ESPListener(message_handler=message_handler)    
 
     while True:

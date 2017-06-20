@@ -15,7 +15,7 @@ Adafruit_MMA8451 mma = Adafruit_MMA8451();
 // wifi
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.18";
+const char* host      = "192.168.1.5";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
@@ -63,7 +63,7 @@ void loop() {
   float mag = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity
   if (mag >= 10.0) {
     mag = 9.999;
-  } elif (mag <= -10.0) {
+  } else if (mag <= -10.0) {
     mag = -9.99; 
   }
 

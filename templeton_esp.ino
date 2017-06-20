@@ -12,98 +12,79 @@ ADC_MODE(ADC_VCC);
 WiFiUDP Udp;
 Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
+// wifi
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.18";
+const char* host      = "192.168.1.5";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
 const int port        = 23232; // both send and receive
-const int rows        = 34; 
-const int entry       = 30; // these have to multiply to < 1024 for UDP
 
-unsigned long ms;
-unsigned long seconds;
-unsigned long last_seconds = 0;
-String idString;
-
+// memory
 uint32_t mem;
+const int entry_size = 32;  // includes termination bit
+const int batch_size = 32;  // these have to multiply to <= 1024 for UDP
+const int set_size = 32;     // total has to keep under available memory (40 is too high)
+int entry = 0;
+int batch = 0;
+char data[set_size][batch_size][entry_size]; 
 
-char data[(rows * entry) + 1]; // 1000 rows of 40 chars at 25 hz is 40 seconds worth of data that can be stored before transmitting.
-int dataIndex = 0;
+// Time
+unsigned long ms;
+unsigned long ms_test;
 
 
 void setup() {
   Serial.begin(115200);
   delay(1);
-  int id = ESP.getChipId();
-  idString = String(id);  
   pinMode(2, OUTPUT);  
-
-//  // allow forced modem sleeping
-//  wifi_set_sleep_type(MODEM_SLEEP_T);
-//  Serial.println(MODEM_SLEEP_T);
-//  delay(1);
-
-  // accel
+  
   Wire.begin(12, 14);    // SDA, SCL
   mma.begin();
   mma.setRange(MMA8451_RANGE_2_G);  
-
-//  // tilt
-//  pinMode(14, INPUT_PULLUP);
   
   connectToWifi();
   Udp.begin(port);
-
-  // initialize buffer and store end byte
-  for (int i=0; i < (rows * entry); i++) {
-    data[i] = 'x';
-  }
-  data[(rows * entry)] = '\0';
-
 }
 
 void loop() {
-  ms = millis();
-  seconds = ms / 1000;
-  if (seconds % 2 == 0) {
+  ms = millis() % 86400000; // wrap every day
+  if (ms / 1000 % 2 == 0) {
     digitalWrite(2, LOW);  
   } else {
     digitalWrite(2, HIGH);  
   }
 
-//  // simple tilt sensor
-//  int tilt = digitalRead(14);
-//  String dataString = idString + "," + String(WiFi.RSSI()) + "," + String(ESP.getVcc()) + "," + ms + "," + String(tilt) + ",0,0";  
-
-  // accelerometer
   mma.read();
   sensors_event_t event; 
   mma.getEvent(&event);  
-  String mag = String(sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8);
-  float bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v
+
+  float mag = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity
+  if (mag > 10.0) {
+    mag = 9.9999;
+  }
+
+  int bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v
+  if (bat == 100) {
+    bat = 99; // need this to be 2 bytes max
+  }
+
+  // ID(8) Bat(2) Rec(2) Time(8) Mag(6) = 26 + ,(4) ;(1) + \0(1) = 32 bytes  
+  // 13019021,70,43,86400000,7.1900;\0
   
-  String dataString = idString + "," + String(WiFi.RSSI() * -1) + "," + String(bat) + "," + ms + "," + mag + ",";
-  char tempBuf[dataString.length() + 1];
-  dataString.toCharArray(tempBuf, dataString.length() + 1);
-  for (int i=0; i<sizeof(tempBuf)-1; i++) {
-      data[(dataIndex * entry) + i] = tempBuf[i];
+  String dataString = String(ESP.getChipId()) + "," + String(WiFi.RSSI() * -1) + "," + bat + "," + ms + "," + String(mag, 4) + ";";
+  dataString.toCharArray(data[batch][entry], dataString.length() + 1);
+  
+  entry++;
+  if (entry == batch_size) {
+    batch++;
+    entry = 0;
   }
-
-//  if (seconds != last_seconds) {
-//    mem = system_get_free_heap_size();
-//    Serial.print("Free memory: ");
-//    Serial.println(mem);
-//  }
-
-  if (dataIndex == rows - 1) {
-    Serial.print("Transmitting...");
+  if (batch == set_size) {
     sendData();
-    Serial.println(" done.");
+    batch = 0;
   }
-  dataIndex = (dataIndex + 1) % rows;
-  last_seconds = seconds;
   
   delay(50);
   
@@ -112,10 +93,25 @@ void loop() {
 void sendData() {
 //  if (WiFi.status() != WL_CONNECTED) {  // dont use this if in forced sleep
 //    connectToWifi();
-//  }                                     // if in UDP should never have to use this  
-  Udp.beginPacket(host, port);  
-  Udp.write(data);  // aparently a limit of 1024
-  Udp.endPacket();      
+//  } // if in UDP should never have to use this 
+
+  mem = system_get_free_heap_size();
+  Serial.print("Free memory: ");
+  Serial.println(mem);
+
+  Serial.print("Transmitting..."); 
+  ms_test = millis();
+  for (int b=0; b<set_size; b++) {
+    Udp.beginPacket(host, port);      // limiting to 1024
+    for (int e=0; e<batch_size; e++) {
+      Udp.write(data[b][e]);  
+    }
+    Udp.endPacket();      
+    delay(1);
+  }
+  Serial.print(" done (");
+  Serial.print(millis() - ms_test);
+  Serial.println("ms)");
 }
 
 void connectToWifi() {

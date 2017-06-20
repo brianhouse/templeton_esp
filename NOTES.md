@@ -110,3 +110,8 @@ can get this to 45 seconds
 
 33x50 should transmit 1650 bytes, but I'm getting 1024, so that feels like a limit.
 31 rows
+
+
+
+// ID(8) Bat(2) Rec(2) Time(8) Mag(6) = 26 + ,(4) ;(1) + \0(1) = 32 bytes  
+13019021,70,43,86400000,7.1900;\0

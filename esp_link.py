@@ -11,8 +11,6 @@ class ESPListener(threading.Thread):
         self.daemon = True
         self.messages = queue.Queue()
         ESPHandler(self.messages, message_handler)
-        self.events = {}
-        self.rates = {}
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.bind(('', port))
@@ -29,34 +27,22 @@ class ESPListener(threading.Thread):
                 pass      
 
     def run(self):
-        t_start = time.time()
         while True:
             try:
-                message, address = self.socket.recvfrom(1024)
+                message, address = self.socket.recvfrom(1024)   # shit, this is where the limit comes from
                 ip, port = address
-                datas = message.decode('utf-8').split('x')
-                datas = [data for data in datas if len(data)]
-                for data in datas:
+                batch = message.decode('utf-8')
+                batch = batch.split(';')
+                for d, data in enumerate(batch):
+                    if not len(data):
+                        continue
                     try:
                         data = data.split(',')
                         esp_id = int(data[0])
-                        if esp_id not in self.events:
-                            self.events[esp_id] = []
-                        if esp_id not in self.rates:
-                            self.rates[esp_id] = 0
-                        self.events[esp_id].append(1)
-                        data = {'id': esp_id, 'rssi': int(data[1]), 'bat': float(data[2]), 'rate': self.rates[esp_id], 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': float(data[3]) / 1000.0, 'mag': float(data[4])}
+                        data = {'id': esp_id, 'rssi': int(data[1]), 'bat': int(float(data[2])), 'ip': ip, 't_utc': timeutil.timestamp(ms=True), 't': float(data[3]) / 1000.0, 'mag': float(data[4])}
                         self.messages.put(data)
                     except Exception as e:
                         log.error(log.exc(e))
-                    elapsed_t = time.time() - t_start
-                    if elapsed_t >= 1:
-                        for esp_id in self.events:
-                            events = len(self.events[esp_id])
-                            rate = math.floor(events / elapsed_t)
-                            self.rates[esp_id] = rate
-                            self.events[esp_id] = []
-                        t_start = time.time()
             except Exception as e:
                 log.error(log.exc(e))
 
@@ -81,41 +67,22 @@ class ESPHandler(threading.Thread):
                 log.error(log.exc(e))
 
 
-class ESPSender(threading.Thread):
-
-    def __init__(self, blocking=False):
-        super(ESPSender, self).__init__()
-        self.daemon = True
-        self.messages = queue.Queue()
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.settimeout(1)
-        self.start()
-        if blocking:
-            try:
-                while True:
-                    time.sleep(1)
-            except (KeyboardInterrupt, SystemExit):
-                self.connection.close()
-                pass
-
-    def run(self):
-        while True:
-            try:
-                message, address = self.messages.get()
-                log.info("SENDING [%s] to %s:%s" % (message, address[0], address[1]))
-                self.socket.sendto(message.encode('ascii'), address)
-            except Exception as e:
-                log.error(log.exc(e))
-
-    def send(self, message, address):
-        self.messages.put((message, address))
-
-
 if __name__ == "__main__":
+    start_t = None
+    current_t = None
+    entries = 0
+    rate = 0
     def message_handler(response):
-        log.info("\t\t[ID %s] [IP %s] [T %.2f] [RSSI %02d] [BAT %.2f] [HZ %02d] [MAG %f]" % (response['id'], response['ip'], response['t'], response['rssi'], response['bat'], response['rate'], response['mag']))
-        # db.branches.insert(data)
+        global start_t, stop_t, entries, rate
+        log.info("[ID %s] [IP %s] [RSSI %02d] [T %.3f] [BAT %02d] [MAG %.4f]" % (response['id'], response['ip'], response['rssi'], response['t'], response['bat'], response['mag']))
+        entries += 1
+        current_t = response['t']
+        if start_t is None:
+            start_t = current_t
+        elapsed_t = current_t - start_t
+        rate = entries / elapsed_t
     fl = ESPListener(message_handler=message_handler)    
 
     while True:
-        time.sleep(0.1)
+        time.sleep(5)
+        log.info("[HZ %.2f]" % rate)

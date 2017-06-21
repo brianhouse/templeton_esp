@@ -124,3 +124,5 @@ so you know it's entered Modem Sleep when it has to reconnect to wifi
 which it was definitely not doing
 
 
+activity has to be cached on the device.
+it has to attempt to transmit its cache.

@@ -69,7 +69,7 @@ void loop() {
     sendData();
   }
   
-  delay(50);
+  delay(500);
 }
 
 void sendData() {
@@ -139,16 +139,21 @@ void sendData() {
 }
 
 void connectToWifi() {
-  Serial.println();
-  Serial.print("Attempting to connect to: ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
+  int i = 0;
   while (WiFi.status() != WL_CONNECTED) {
+    if (i % 10 == 0) {
+      Serial.println();
+      Serial.print("--> attempting to connect to: ");
+      Serial.println(ssid);      
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
+    }
     digitalWrite(2, HIGH);
     delay(250);
     digitalWrite(2, LOW);
     delay(250);      
     Serial.print(".");
+    i++;
   }
   Serial.println();
   Serial.println("--> connected to wifi");

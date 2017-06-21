@@ -47,6 +47,7 @@ up top:
     extern "C" {
       #include "user_interface.h"
     }
+    wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
 
 then
 
@@ -114,4 +115,12 @@ can get this to 45 seconds
 
 
 // ID(8) Bat(2) Rec(2) Time(8) Mag(6) = 26 + ,(4) ;(1) + \0(1) = 32 bytes  
-13019021,70,43,86400000,7.1900;\0
+13019021,70,43,86400000,-7.190;\0
+
+
+/////
+
+so you know it's entered Modem Sleep when it has to reconnect to wifi
+which it was definitely not doing
+
+

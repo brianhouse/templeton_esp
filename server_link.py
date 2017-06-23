@@ -11,15 +11,25 @@ class Home(server.Handler):
         log.info("POST")
         raw = str(self.request.body, encoding="utf-8")
         batch = raw.split(';')
-        for d, data in enumerate(batch):
+        d = 0
+        for data in batch:
             if not len(data):
                 continue
             try:
-                data = data.split(',')
-                response = {'id': int(data[0]), 'rssi': int(data[1]), 'bat': int(float(data[2])), 't': float(data[3]) / 1000.0, 'mag': float(data[4])}
+                if data[0:8] == data[8:16]: # who knows
+                    data = data[8:]
+                assert len(data) == 31  # minus ;
+                fields = data.split(',')
+                response = {'id': int(fields[0]), 'rssi': int(fields[1]), 'bat': int(float(fields[2])), 't': float(fields[3]) / 1000.0, 'mag': float(fields[4])}
                 log.info("[ID %s] [RSSI %02d] [T %.3f] [BAT %02d] [MAG %.3f]" % (response['id'], response['rssi'], response['t'], response['bat'], response['mag']))
+                d += 1
+            except AssertionError as e:
+                log.error(data)
+                log.error("Length is %d" % len(data))
             except Exception as e:
-                log.error(log.exc(e))        
+                log.error(log.exc(e))   
+                log.error(data)    
+        log.info("--> received %d entries" % d) 
         return self.text("OK")
 
 handlers = [

@@ -20,7 +20,7 @@ const int port        = 8000;
 
 // memory
 uint32_t mem;
-const int transmit_bytes = 32 * 80;   // 91 appears to be max
+const int transmit_bytes = 32 * 928;   // second terms should be divisble by 32; seems like 928 is max
 String data = "";
 
 // time
@@ -31,6 +31,8 @@ unsigned long last_seconds = 0;
 
 // accel
 Adafruit_MMA8451 mma = Adafruit_MMA8451();
+
+const String id = String(ESP.getChipId());
 
 
 void setup() {
@@ -52,7 +54,7 @@ void setup() {
 }
 
 void loop() {
-  ms = millis();
+  ms = millis() % 86400000; // wrap every day
   seconds = ms / 1000;
   if (seconds % 2 == 0) {
     digitalWrite(2, LOW);  
@@ -60,22 +62,55 @@ void loop() {
     digitalWrite(2, HIGH);  
   }
 
+  // ID(8) Bat(2) Rec(2) Time(8) Mag(6) = 26 + ,(4) ;(1) + \0(1) = 32 bytes  
+
+  // accelerometer, 7 bytes
   mma.read();
   sensors_event_t event; 
   mma.getEvent(&event);  
+  float mag_value = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity  
+  if (mag_value >= 10.0) {
+    mag_value = 9.9999;
+  }
+  if (mag_value <= -10.0) {
+    mag_value = -9.9999;
+  }
+  String mag = String(mag_value, 4);
+  if (mag_value >= 0) {
+    mag = "+" + mag;
+  }
 
-  float mag = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity
-  int bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v  
-  data += String(ESP.getChipId()) + "," + String(WiFi.RSSI() * -1) + "," + bat + "," + ms + "," + String(mag, 4) + ";";
+  // battery, 2 bytes
+  int bat_value = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v  
+  if (bat_value >= 100) {
+    bat_value = 99;
+  }
+  if (bat_value <= 0) {
+    bat_value = 0;
+  }
+  String bat = String(bat_value);
+  if (bat.length() < 2) {
+    bat = "0" + bat;
+  }
+
+  // time, 8 bytes
+  char tv[9];
+  sprintf(tv, "%08d", ms);
+  String t = String(tv);
+
+  // rssi, 2 bytes
+  String rssi = String(abs(WiFi.RSSI()));
+
+  String datum = id + "," + rssi + "," + bat + "," + t + "," + mag + ";";
+  
+  data += datum;
 
   if (seconds != last_seconds) {
-    Serial.println(data.length());    
+//    Serial.println(datum);
   }
   last_seconds = seconds;
   
   if (data.length() >= transmit_bytes) {
-    Serial.print("--> ");
-    Serial.println(data.length());
     sendData();
   }
   
@@ -87,6 +122,8 @@ void sendData() {
   mem = system_get_free_heap_size();
   Serial.print("Free memory: ");
   Serial.println(mem);
+  Serial.print("BAT ");
+  Serial.println(ESP.getVcc());
 
   Serial.println("Transmitting..."); 
 
@@ -120,8 +157,12 @@ void sendData() {
   connection.print("Content-Length: ");
   connection.println(data.length());
   connection.println();
-  
-  connection.print(data);          
+
+  for (int i=0; i<(data.length() / 1024) + 1; i++) {
+    connection.print(data.substring(i * 1024, 1024));
+  }
+
+  Serial.println("--> sending...");
 
   unsigned long timeout = millis();
   while (connection.available() == 0) {

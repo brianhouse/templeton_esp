@@ -7,13 +7,17 @@ from housepy import chart
 ts = []
 bats = []
 
-with open("esp_link.log") as f:
+with open("output.txt") as f:
     for line in f:
-        t = float(line.split("[T ")[-1].split("]")[0]) / 60
-        bat = int((float(line.split("BAT ")[-1].split("%")[0]) * 1024))
-        bat = (((bat - 2724) / (3622 - 2724)) * 1.2) + 3.0
-        ts.append(t)
-        bats.append(bat)
+        try:
+            t = float(line.split("[T ")[-1].split("]")[0]) / 60
+            # bat = int((float(line.split("BAT ")[-1].split("%")[0]) * 1024))
+            # bat = (((bat - 2724) / (3622 - 2724)) * 1.2) + 3.0
+            bat = int(line.split("BAT ")[-1].split(']')[0])
+            ts.append(t)
+            bats.append(bat)
+        except Exception as e:
+            pass
 
 data = np.array(list(zip(ts, bats)))
 

@@ -12,7 +12,7 @@ ADC_MODE(ADC_VCC);
 WiFiClient connection;
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.5";
+const char* host      = "192.168.1.9";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
@@ -20,12 +20,14 @@ const int port        = 8000;
 
 // memory
 uint32_t mem;
-const int transmit_bytes = 32 * 50;   // 91 appears to be max
+const int transmit_bytes = 32 * 80;   // 91 appears to be max
 String data = "";
 
 // time
 unsigned long ms;
 unsigned long ms_test;
+unsigned long seconds;
+unsigned long last_seconds = 0;
 
 // accel
 Adafruit_MMA8451 mma = Adafruit_MMA8451();
@@ -42,7 +44,7 @@ void setup() {
   mma.begin();
   mma.setRange(MMA8451_RANGE_2_G);  
 
-  data[sizeof(data) - 1] = '\0';
+//  data[sizeof(data) - 1] = '\0';
   
 //  connectToWifi();
   WiFi.forceSleepBegin();
@@ -51,7 +53,8 @@ void setup() {
 
 void loop() {
   ms = millis();
-  if (ms / 1000 % 2 == 0) {
+  seconds = ms / 1000;
+  if (seconds % 2 == 0) {
     digitalWrite(2, LOW);  
   } else {
     digitalWrite(2, HIGH);  
@@ -64,12 +67,19 @@ void loop() {
   float mag = sqrt((event.acceleration.x * event.acceleration.x) + (event.acceleration.y * event.acceleration.y) + (event.acceleration.z * event.acceleration.z)) - 9.8; // subtract gravity
   int bat = lround(((ESP.getVcc() - 2724.0) / (3622.0 - 2724.0)) * 100); // constants for adafruit battery, 3.0v-4.2v  
   data += String(ESP.getChipId()) + "," + String(WiFi.RSSI() * -1) + "," + bat + "," + ms + "," + String(mag, 4) + ";";
+
+  if (seconds != last_seconds) {
+    Serial.println(data.length());    
+  }
+  last_seconds = seconds;
   
   if (data.length() >= transmit_bytes) {
+    Serial.print("--> ");
+    Serial.println(data.length());
     sendData();
   }
   
-  delay(500);
+  delay(50);
 }
 
 void sendData() {

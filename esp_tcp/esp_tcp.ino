@@ -12,7 +12,7 @@ ADC_MODE(ADC_VCC);
 WiFiClient connection;
 const char* ssid      = "3V8VC";
 const char* password  = "7YYGM8V3R65V52FJ";
-const char* host      = "192.168.1.9";
+const char* host      = "192.168.1.18";
 //const char* ssid     = "GL-MT300N-5cb";
 //const char* password = "goodlife";
 //const char* host     = "192.168.8.235";
@@ -32,7 +32,7 @@ unsigned long last_seconds = 0;
 // accel
 Adafruit_MMA8451 mma = Adafruit_MMA8451();
 
-const String id = String(ESP.getChipId());
+String id;
 
 
 void setup() {
@@ -41,6 +41,10 @@ void setup() {
   pinMode(2, OUTPUT);  
 
   wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
+
+  char idc[9];
+  sprintf(idc, "%08d", ESP.getChipId());
+  id = String(idc);
   
   Wire.begin(12, 14);    // SDA, SCL
   mma.begin();

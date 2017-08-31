@@ -105,7 +105,7 @@ function mouseReleased() {
     select_start = null;
     select_stop = null;    
 
-    window.location = "/" + collar_id + "/" + start_t + "/" + stop_t;
+    window.location = "/" + collar_id + "/" + session + "/" + start_t + "/" + stop_t;
 
     return false;
 }

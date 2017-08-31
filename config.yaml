@@ -8,3 +8,4 @@ mongo:
 
 server:
   port: 8000
+  compress_response: True

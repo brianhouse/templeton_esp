@@ -5,10 +5,10 @@ from mongo import ASCENDING, DESCENDING
 
 class Home(server.Handler):
 
-    def get(self, collar_id=None, start_t=None, stop_t=None):
+    def get(self, collar_id=None, session_id=None, start_t=None, stop_t=None):
         log.info("GET")
         session_list = []
-        if not len(collar_id):
+        if not len(collar_id) or not len(session_id):
             collar_ids = list(self.db.entries.find().distinct("collar_id"))
             for collar_id in collar_ids:
                 sessions = list(self.db.entries.find({'collar_id': collar_id}).distinct("session"))
@@ -23,8 +23,9 @@ class Home(server.Handler):
         else:
             stop_t = int(stop_t)
         collar_id = strings.as_numeric(collar_id)
+        session_id = strings.as_numeric(session_id)
         log.info("%d (%s-%s)" % (collar_id, start_t, stop_t))
-        template = {'t': {'$gt': start_t, '$lt': stop_t}, 'collar_id': collar_id}
+        template = {'t': {'$gt': start_t, '$lt': stop_t}, 'collar_id': collar_id, 'session': session_id}
         log.debug(template)
         results = list(self.db.entries.find(template).sort('t'))
         start_segment = None
@@ -36,9 +37,9 @@ class Home(server.Handler):
             del result['_id']
             del result['session']
         log.debug("Returned %s entries" % len(results))
-        return self.render("home.html", data=results, collar_id=collar_id, start_segment=start_segment, stop_segment=stop_segment)
+        return self.render("home.html", data=results, collar_id=collar_id, session=session_id, start_segment=start_segment, stop_segment=stop_segment)
 
-    def post(self, nop1=None, nop2=None, nop3=None):
+    def post(self, nop1=None, nop2=None, nop3=None, nop4=None):
         log.info("POST")
         raw = str(self.request.body, encoding="utf-8")
         batch = raw.split(';')
@@ -84,6 +85,6 @@ class Home(server.Handler):
 
 
 handlers = [
-    (r"/?([^/]*)/?([^/]*)/?([^/]*)", Home),
+    (r"/?([^/]*)/?([^/]*)/?([^/]*)/?([^/]*)", Home),
 ]    
 server.start(handlers)

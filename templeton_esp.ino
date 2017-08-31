@@ -10,12 +10,12 @@ ADC_MODE(ADC_VCC);
 
 // wifi
 WiFiClient connection;
-const char* ssid      = "3V8VC";
-const char* password  = "8GGY42ZJRj10550F";
-const char* host      = "192.168.1.7";
-//const char* ssid     = "GL-MT300N-182";
-//const char* password = "goodlife";
-//const char* host     = "192.168.8.132";
+//const char* ssid      = "3V8VC";
+//const char* password  = "8GGY42ZJRj10550F";
+//const char* host      = "192.168.1.7";
+const char* ssid     = "GL-MT300N-182";
+const char* password = "goodlife";
+const char* host     = "192.168.8.132";
 const int port        = 8000;
 
 // memory
@@ -201,6 +201,7 @@ void connectToWifi() {
     if (i % 10 == 0) {
       Serial.print("Reconnecting to wifi...");
       WiFi.disconnect();
+      delay(250);
       WiFi.begin(ssid, password);
     }
     digitalWrite(0, HIGH);

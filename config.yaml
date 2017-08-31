@@ -1,10 +1,10 @@
 tail: True
 log: False
 
-# mongo:
-#     host: localhost
-#     port: 27017
-#     database: collars
+mongo:
+    host: localhost
+    port: 27017
+    database: templeton
 
 server:
   port: 8000

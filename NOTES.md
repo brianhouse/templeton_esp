@@ -118,11 +118,12 @@ can get this to 45 seconds
 13019021,70,43,86400000,-7.1900;
 
 
-/////
 
-so you know it's entered Modem Sleep when it has to reconnect to wifi
-which it was definitely not doing
+////
 
+so the data runs on the pi, and I retrieve it via a browser? is that valid? I guess so.
 
-activity has to be cached on the device.
-it has to attempt to transmit its cache.
+you are going to have to manually set the clock
+sudo date -s "Mon Aug  12 20:14:11 UTC 2014"
+"sudo date -u MMDDhhmmCCYY"
+

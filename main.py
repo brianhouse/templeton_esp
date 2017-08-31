@@ -1,52 +1,75 @@
 #!/usr/bin/env python3
 
-import time, os, queue
-from collections import deque, OrderedDict
-from esp_link import ESPListener
-from housepy import config, log, timeutil, animation
+from housepy import server, config, log, timeutil, strings
+from mongo import db
 
-sensor_data = {}
-sensor_rssi = OrderedDict()
-labels = []
+class Home(server.Handler):
 
-RANGE = -20, 20
-COLORS = (.8, 0., 0., 1.), (0., .8, 0., 1.), (0., 0., .8, 1.), (.8, .8, 0., 1.), (0., .8, .8, 1.), (.8, 0., .8, 1.)
+    def get(self, collar_id=None, start=None, stop=None):
+        log.info("GET")
+        if not len(collar_id):
+            return self.text("/collar_id/start/end")
+        if not len(start):
+            start = "2017-01-01"
+        if not len(stop):
+            stop = "2020-01-31"
+        collar_id = strings.as_numeric(collar_id)
+        start = timeutil.string_to_dt(start, "America/New_York")            
+        stop = timeutil.string_to_dt(stop, "America/New_York")
+        log.info("%d (%s-%s)" % (collar_id, start, stop))
+        start_t = timeutil.timestamp(start)
+        stop_t = timeutil.timestamp(stop)
+        template = {'t': {'$gt': start_t, '$lt': stop_t}, 'collar_id': collar_id}
+        log.debug(template)
+        results = list(db.entries.find(template).sort('t'))
+        if len(results):
+            min_t = results[0]['t']
+            max_t = results[-1]['t'] - min_t
+        for result in results:
+            del result['_id']
+            result['t'] -= min_t
+            result['t'] /= max_t
+        log.debug("Returned %s entries" % len(results))
+        return self.render("home.html", data=results)
+
+    def post(self, nop1=None, nop2=None, nop3=None):
+        log.info("POST")
+        current_t = timeutil.timestamp()
+        raw = str(self.request.body, encoding="utf-8")
+        batch = raw.split(';')
+        d = 0
+        entries = []
+        for data in batch:
+            if not len(data):
+                continue
+            try:
+                if data[0:8] == data[8:16]: # who knows
+                    data = data[8:]
+                assert len(data) == 31  # minus ;
+                fields = data.split(',')
+                response = {'collar_id': int(fields[0]), 'rssi': int(fields[1]), 'bat': int(float(fields[2])), 't': (float(fields[3]) / 1000.0), 'mag': float(fields[4])}
+                log.info("[ID %s] [RSSI %02d] [T %.3f] [BAT %02d] [MAG %.3f]" % (response['collar_id'], response['rssi'], response['t'], response['bat'], response['mag']))
+                entries.append(response)
+                d += 1
+            except AssertionError as e:
+                log.error(data)
+                log.error("Length is %d" % len(data))
+            except Exception as e:
+                log.error(log.exc(e))   
+                log.error(data)  
+        log.info("--> received %d entries" % len(entries)) 
+        entries.sort(key=lambda entry: entry['t'])
+        max_t = entries[-1]['t']
+        for entry in entries:
+            entry['t'] = (current_t - 5.0 - max_t) + entry['t']     # 5 second delay on transmission
+        try:
+            db.entries.insert_many(entries)
+        except Exception as e:
+            log.error(log.exc(e))
+        return self.text("OK")
 
 
-def draw():
-    t_now = timeutil.timestamp(ms=True)
-
-    # do labels
-    for s, (esp_id, (t, rssi)) in enumerate(sensor_rssi.copy().items()):
-        if t_now - t > 3:
-            bar = 0.01
-        else:
-            bar = 1.0 - (max(abs(rssi) - 25, 0) / 100)
-        x = (20 + (s * 20)) / ctx.width
-        ctx.line(x, .1, x, (bar * 0.9) + .1, color=COLORS[esp_id % len(COLORS)], thickness=10)
-        if esp_id not in labels:
-            print("Adding label for esp_id %s" % esp_id)
-            labels.append(esp_id)
-            ctx.label(x, .05, str(esp_id), font="Monaco", size=10, width=10, center=True)
-
-    # data
-    for s, esp_id in enumerate(list(sensor_data)):
-        samples = sensor_data[esp_id]    
-        if len(samples):
-            ctx.lines([ ((t_now - sample[0]) / 10.0, (sample[1] - RANGE[0] - 9.8) / (RANGE[1] - RANGE[0]) ) for sample in list(samples)], color=COLORS[esp_id % len(COLORS)])    # subtract 9.8 to center it
-
-
-if __name__ == "__main__":
-    def message_handler(response):
-        # db.branches.insert(data)
-        if response['id'] not in sensor_data:
-            sensor_data[response['id']] = deque()
-            sensor_rssi[response['id']] = None
-        sensor_data[response['id']].appendleft((response['t_utc'], response['mag']))
-        sensor_rssi[response['id']] = response['t_utc'], response['rssi']
-        if len(sensor_data[response['id']]) == 1000:
-            sensor_data[response['id']].pop()        
-    ESPListener(message_handler=message_handler)    
-
-    ctx = animation.Context(1000, 300, background=(1., 1., 1., 1.), fullscreen=False, title="RAT", smooth=True)    
-    ctx.start(draw)
+handlers = [
+    (r"/?([^/]*)/?([^/]*)/?([^/]*)", Home),
+]    
+server.start(handlers)

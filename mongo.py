@@ -10,9 +10,8 @@ db = client[mongo['database']]
 
 def make_indexes():
     try:
-        db.branches.create_index([("t", ASCENDING)])
-        db.branches.create_index("session")
-        db.branches.create_index("sensor")
+        db.entries.create_index("id")
+        db.entries.create_index([("t", ASCENDING)])
     except Exception as e:
         log.error(log.exc(e))
 
@@ -21,9 +20,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         arg = sys.argv[1]
     if arg == 'dump':
-        result = db.branches.remove()
-        print(result)
-        result = db.sessions.remove()
+        result = db.entries.remove()
         print(result)
     else:
         make_indexes()

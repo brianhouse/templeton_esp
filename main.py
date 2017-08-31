@@ -8,29 +8,34 @@ class Home(server.Handler):
     def get(self, collar_id=None, start=None, stop=None):
         log.info("GET")
         if not len(collar_id):
-            return self.text("/collar_id/start/end")
+            collar_ids = list(db.entries.find().distinct("collar_id"))
+            return self.render("index.html", collar_ids=collar_ids)
         if not len(start):
             start = "2017-01-01"
         if not len(stop):
             stop = "2020-01-31"
         collar_id = strings.as_numeric(collar_id)
-        start = timeutil.string_to_dt(start, "America/New_York")            
-        stop = timeutil.string_to_dt(stop, "America/New_York")
+        try:
+            start = timeutil.string_to_dt(start, "America/New_York")            
+            stop = timeutil.string_to_dt(stop, "America/New_York")
+        except Exception as e:
+            log.error(log.exc(e))
+            return self.error(e)
         log.info("%d (%s-%s)" % (collar_id, start, stop))
         start_t = timeutil.timestamp(start)
         stop_t = timeutil.timestamp(stop)
         template = {'t': {'$gt': start_t, '$lt': stop_t}, 'collar_id': collar_id}
         log.debug(template)
         results = list(db.entries.find(template).sort('t'))
+        first_seen = None
+        last_seen = None
         if len(results):
-            min_t = results[0]['t']
-            max_t = results[-1]['t'] - min_t
+            first_seen = timeutil.t_to_string(results[0]['t'], tz="America/New_York").replace("T", " ").replace("-0400", "")
+            last_seen = timeutil.t_to_string(results[-1]['t'], tz="America/New_York").replace("T", " ").replace("-0400", "")
         for result in results:
             del result['_id']
-            result['t'] -= min_t
-            result['t'] /= max_t
         log.debug("Returned %s entries" % len(results))
-        return self.render("home.html", data=results)
+        return self.render("home.html", data=results, collar_id=collar_id, first_seen=first_seen, last_seen=last_seen)
 
     def post(self, nop1=None, nop2=None, nop3=None):
         log.info("POST")

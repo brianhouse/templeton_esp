@@ -10,7 +10,8 @@ db = client[mongo['database']]
 
 def make_indexes():
     try:
-        db.entries.create_index("id")
+        db.entries.drop_indexes()
+        db.entries.create_index("collar_id")
         db.entries.create_index([("t", ASCENDING)])
     except Exception as e:
         log.error(log.exc(e))
@@ -19,8 +20,14 @@ if __name__ == "__main__":
     arg = None
     if len(sys.argv) > 1:
         arg = sys.argv[1]
+    else:
+        print("[dump|index]")
+        exit()
     if arg == 'dump':
+        print("Dumping all entries...")
         result = db.entries.remove()
         print(result)
-    else:
+    if arg == 'index':
+        print("Regenerating indexes...")
         make_indexes()
+        print("--> done")

@@ -1,45 +1,45 @@
 #!/usr/bin/env python3
 
 from housepy import server, config, log, timeutil, strings
-from mongo import db
+from mongo import ASCENDING, DESCENDING
 
 class Home(server.Handler):
 
-    def get(self, collar_id=None, start=None, stop=None):
+    def get(self, collar_id=None, start_t=None, stop_t=None):
         log.info("GET")
+        session_list = []
         if not len(collar_id):
-            collar_ids = list(db.entries.find().distinct("collar_id"))
-            return self.render("index.html", collar_ids=collar_ids)
-        if not len(start):
-            start = "2017-01-01"
-        if not len(stop):
-            stop = "2020-01-31"
+            collar_ids = list(self.db.entries.find().distinct("collar_id"))
+            for collar_id in collar_ids:
+                sessions = list(self.db.entries.find({'collar_id': collar_id}).distinct("session"))
+                session_list.append({'collar_id': collar_id, 'sessions': sessions})
+            return self.render("index.html", session_list=session_list)
+        if not len(start_t):
+            start_t = 0
+        else:
+            start_t = int(start_t)
+        if not len(stop_t):
+            stop_t = 86400000
+        else:
+            stop_t = int(stop_t)
         collar_id = strings.as_numeric(collar_id)
-        try:
-            start = timeutil.string_to_dt(start, "America/New_York")            
-            stop = timeutil.string_to_dt(stop, "America/New_York")
-        except Exception as e:
-            log.error(log.exc(e))
-            return self.error(e)
-        log.info("%d (%s-%s)" % (collar_id, start, stop))
-        start_t = timeutil.timestamp(start)
-        stop_t = timeutil.timestamp(stop)
+        log.info("%d (%s-%s)" % (collar_id, start_t, stop_t))
         template = {'t': {'$gt': start_t, '$lt': stop_t}, 'collar_id': collar_id}
         log.debug(template)
-        results = list(db.entries.find(template).sort('t'))
-        first_seen = None
-        last_seen = None
+        results = list(self.db.entries.find(template).sort('t'))
+        start_segment = None
+        stop_segment = None
         if len(results):
-            first_seen = timeutil.t_to_string(results[0]['t'], tz="America/New_York").replace("T", " ").replace("-0400", "")
-            last_seen = timeutil.t_to_string(results[-1]['t'], tz="America/New_York").replace("T", " ").replace("-0400", "")
+            start_segment = timeutil.seconds_to_string(results[0]['t'])
+            stop_segment = timeutil.seconds_to_string(results[-1]['t'])
         for result in results:
             del result['_id']
+            del result['session']
         log.debug("Returned %s entries" % len(results))
-        return self.render("home.html", data=results, collar_id=collar_id, first_seen=first_seen, last_seen=last_seen)
+        return self.render("home.html", data=results, collar_id=collar_id, start_segment=start_segment, stop_segment=stop_segment)
 
     def post(self, nop1=None, nop2=None, nop3=None):
         log.info("POST")
-        current_t = timeutil.timestamp()
         raw = str(self.request.body, encoding="utf-8")
         batch = raw.split(';')
         d = 0
@@ -65,10 +65,19 @@ class Home(server.Handler):
         log.info("--> received %d entries" % len(entries)) 
         entries.sort(key=lambda entry: entry['t'])
         max_t = entries[-1]['t']
+        result = list(self.db.entries.find().limit(1).sort([('t', DESCENDING)]))
+        if len(result):
+            final_t = result[0]['t']
+            session = result[0]['session']
+        else:
+            final_t = 0
+            session = 1
+        if max_t < final_t:
+            session += 1
         for entry in entries:
-            entry['t'] = (current_t - 5.0 - max_t) + entry['t']     # 5 second delay on transmission
+            entry['session'] = session            
         try:
-            db.entries.insert_many(entries)
+            self.db.entries.insert_many(entries)
         except Exception as e:
             log.error(log.exc(e))
         return self.text("OK")

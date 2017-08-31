@@ -1,5 +1,20 @@
-/collar_id/start/stop<br />
-<br />
-{% for collar_id in collar_ids %}
-<a href="/{{ collar_id }}">{{ collar_id }}</a><br />
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Templeton</title>
+    <style type="text/css">
+        html, body {
+          margin: 50px;
+          font: 14px monospace;
+        }
+    </style>
+</head>
+<body>
+{% for session_item in session_list %}
+    {% for session in session_item['sessions'] %}
+        <a href="/{{ session_item['collar_id'] }}/{{ session }}">/{{ session_item['collar_id'] }}/{{ session }}</a><br />
+    {% endfor %}
 {% endfor %}
+
+</body>
+</html>

@@ -134,12 +134,15 @@ void sendData() {
   delay(5000);
   Serial.println("--> awake");
 
-  while (!connection.connect(host, port)) {
-    Serial.println("--> connection failed");
+  if (!connection.connect(host, port)) {
+    Serial.println("--> connection to server failed");
     if (WiFi.status() != WL_CONNECTED) {
       connectToWifi();
     }
     if (!connection.connect(host, port)) {
+      Serial.println("--> can't reach server, aborting");
+      Serial.println();
+      data = "";
       return;
     }
   }
@@ -196,7 +199,7 @@ void connectToWifi() {
   int i = 0;
   while (WiFi.status() != WL_CONNECTED) {
     if (i % 10 == 0) {
-      Serial.print("Connecting");
+      Serial.print("Reconnecting to wifi...");
       WiFi.disconnect();
       WiFi.begin(ssid, password);
     }
@@ -208,7 +211,7 @@ void connectToWifi() {
     i++;
   }
   Serial.println();
-  Serial.println("--> connected");
+  Serial.println("--> connected to wifi");
 }
 
 

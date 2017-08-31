@@ -127,3 +127,13 @@ you are going to have to manually set the clock
 sudo date -s "Mon Aug  12 20:14:11 UTC 2014"
 "sudo date -u MMDDhhmmCCYY"
 
+
+
+///
+
+estimating the exact time is kind of wrong here ...
+infinite loops trying to reconnect to wifi mean that it could transmit a packet far later than it was collected, and then receive another which it will then place way in the past.
+
+there needs to be a transmission time reference. or, some inherent sense of sessions.
+
+if it receives a timestamp that is out of order, it should start a new session

@@ -12,7 +12,9 @@ def make_indexes():
     try:
         db.entries.drop_indexes()
         db.entries.create_index("collar_id")
+        db.entries.create_index("session")
         db.entries.create_index([("t", ASCENDING)])
+        db.entries.create_index([("t", DESCENDING)])
     except Exception as e:
         log.error(log.exc(e))
 

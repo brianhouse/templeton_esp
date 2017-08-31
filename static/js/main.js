@@ -14,23 +14,52 @@ function setup() {
     canvas.parent('p5');
     background(255, 204, 0);
 
+    if (data.length == 0) {
+        return;
+    }
+
     min_t = data[0]['t'];
     max_t = data[data.length - 1]['t'];
+
     var prev_x = 0;
     var prev_y = 0.5;
+    stroke(0, 0, 0, 128);
     for (var i in data) {
         entry = data[i];
         x = ((entry['t'] - min_t) / (max_t - min_t)) * width;
-        y = ((entry['mag'] / 7.0) + 0.5) * height;
+        y = ((entry['mag'] / 14.0) + 0.5) * height;
         line(prev_x, prev_y, x, y);
-        // point(x, y);
         prev_x = x;
         prev_y = y;
     }
 
+    var prev_x = 0;
+    var prev_y = height/2;
+    stroke(255, 0, 0, 255);
+    for (var i in data) {
+        entry = data[i];
+        x = ((entry['t'] - min_t) / (max_t - min_t)) * width;
+        y = (1.0 - (entry['bat'] / 105)) * height;
+        line(prev_x, prev_y, x, y);
+        prev_x = x;
+        prev_y = y;
+    }
+
+    var prev_x = 0;
+    var prev_y = height/2;
+    stroke(0, 0, 255, 255);
+    for (var i in data) {
+        entry = data[i];
+        x = ((entry['t'] - min_t) / (max_t - min_t)) * width;
+        y = ((abs(entry['rssi']) - 25) / 90) * height;
+        line(prev_x, prev_y, x, y);
+        prev_x = x;
+        prev_y = y;
+    }
+    stroke(0, 0, 0, 64);
     textFont("monospace", 12);
-    text(first_seen, 30, 130);
-    text(last_seen, 30, 140);
+    text(start_segment, 30, 130);
+    text(stop_segment, 30, 140);
 }
 
 function draw() {
